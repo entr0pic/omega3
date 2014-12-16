@@ -1,0 +1,35 @@
+.omega3 .axis line {
+  shape-rendering: crispEdges;
+  stroke: #000;
+}
+
+.omega3 .axis path,
+.omega3 .axis line {
+    fill: none;
+    stroke: #777;
+    shape-rendering: crispEdges;
+}
+
+.omega3 .axis.dashed line {
+  stroke: #777;
+  stroke-dasharray: 2,2;
+}
+
+.omega3 .axis.dashed path {
+  display: none;
+}
+
+.omega3 .omega3-tooltip {
+	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.omega3 .marker-line {
+	stroke: black;
+	stroke-width: 2;	
+}
+
+.omega3 .omega3-legend rect {
+	fill:none;
+	stroke:none;
+	opacity:0.8;
+}

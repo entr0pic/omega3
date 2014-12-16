@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Title Page</title>
+
+		<!-- Bootstrap CSS -->
+		<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+
+		<link href="./omega3.css" rel="stylesheet">
+
+		<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+		<!-- WARNING: Respond.js doesn't work if you view the page via file:http:// -->
+		<!--[if lt IE 9]>
+			<script src="https:http://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+			<script src="https:http://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body onload="drawTest()">
+		<h1 class="text-center">Ω3</h1>
+
+		<!-- jQuery -->
+		<script src="http://code.jquery.com/jquery.js"></script>
+		<!-- Bootstrap JavaScript -->
+		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.2/d3.min.js"></script>
+		<script src="./omega3.js"></script>
+		<script>
+			function drawTest () {
+				var dataset = [];
+				var options = ["Set 1", "Set 2", "Set 3", "Super Set"];
+				for (var i=0; i < 20; i++) {
+				var r = (Math.random()-0.5) * 50;
+				var r2 = r + (Math.random()-0.5) * 1;
+				dataset.push({xV: r , yV:r2, name:options[Math.floor(Math.random()*options.length)]});
+				}
+
+				var currentScatter = omega3.scatter(dataset)
+										.xAxisValue("xV")
+										.yAxisValue("yV")
+										.setColourFunction(function (d) {return d.name})
+										.init();
+			}
+			
+		</script>
+	</body>
+</html>

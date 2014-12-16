@@ -7,6 +7,8 @@
 		throw "d3 is not defined. This library is required.";
 	};
 
+	omega3.baseClass = "omega3"
+
 	omega3.legend = function (g) {
 		var defaultShape = 'rect';
 		g.each(function() {
@@ -14,15 +16,15 @@
 		        items = {},
 		        svg = d3.select(g.property("nearestViewportElement")),
 		        legendPadding = g.attr("data-style-padding") || 20,
-		        lb = g.selectAll(".legend-box").data([true]),
-		        li = g.selectAll(".legend-items").data([true])
+		        lb = g.selectAll(".omega3-legend-box").data([true]),
+		        li = g.selectAll(".omega3-legend-items").data([true])
 		 
-		    lb.enter().append("rect").classed("legend-box",true)
-		    li.enter().append("g").classed("legend-items",true)
+		    lb.enter().append("rect").classed("omega3-legend-box",true)
+		    li.enter().append("g").classed("omega3-legend-items",true)
 		 
-		    svg.selectAll("[omega3-legend]").each(function() {
+		    svg.selectAll("[omega3-legend-data]").each(function() {
 		        var self = d3.select(this)
-		        items[self.attr("omega3-legend")] = {
+		        items[self.attr("omega3-legend-data")] = {
 		          pos : self.attr("omega3-legend-pos") || this.getBBox().y,
 		          color : self.attr("omega3-legend-color") != undefined ? self.attr("omega3-legend-color") : self.style("fill") != 'none' ? self.style("fill") : self.style("stroke"),
 		          shape : self.attr("omega3-legend-shape") || defaultShape
@@ -37,10 +39,10 @@
 		    
 		    var mouseover = function (d) {
 		    	highlightRecord = [];
-	        	d3.selectAll("[omega3-legend]").each(function(){
+	        	d3.selectAll("[omega3-legend-data]").each(function(){
 	        		
 	        		var self = d3.select(this);
-	        		var legendName = self.attr("omega3-legend");
+	        		var legendName = self.attr("omega3-legend-data");
 	        		
 	        		highlightRecord.push({node:self, opacity: self.attr("opacity") || 1});
 	        		if (d.key == legendName) {
@@ -196,7 +198,7 @@
 		d3.select(selector)
 			.append("form")
 			.attr("class", "omega3-search omega3-extras")
-			.attr("role", "form")
+			//.attr("role", "form")
 			.style("position", "relative")
 			.style("top", top || 0)
 			.style("left", left || 0)
@@ -265,7 +267,7 @@
 
 	omega3.scatter = function(jsonData) {
 		var scatter = {};
-		scatter.chartClass = "omega3-bubble";
+		scatter.chartClass = "omega3-scatter";
 		scatter.data = jsonData;
 		scatter.nodes = [];
 		scatter.bindingSelector = "body";
@@ -465,6 +467,7 @@
 			} else {
 				svg = d3.select(scatter.bindingSelector)
 						.append('svg')
+						.classed(omega3.baseClass, true)
 						.classed(scatter.chartClass, true)
 						.attr("width", scatter.width )
 						.attr("height", scatter.height );
@@ -671,7 +674,7 @@
 		        .attr("cy", function(d) { return Math.random() * scatter.height; })
 				.attr("fill", function(d) { return scatter.colourRange(scatter.colourFunction(d))})
 				.attr('r', function(d) {return 0;})
-				.attr("omega3-legend", scatter.legendFunction)
+				.attr("omega3-legend-data", scatter.legendFunction)
 				.attr("omega3-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
 				.call(scatter.force.drag)
 				.transition()
@@ -785,10 +788,18 @@
 
 			scatter.force.start();
 
+			if (!scatter.hideSearch) {
+				omega3.addSearch(scatter.bindingSelector,
+					 			[scatter.circles], 
+					 			-scatter.padding - 20, 
+					 			scatter.width + 10, 
+					 			scatter.legendArea - 25)
+			}
+
 			if (scatter.showLegend && scatter.legendFunction) {
-				svg.select(".legend").remove();
+				svg.select(".omega3-legend").remove();
 				legend = svg.append("g")
-					  .attr("class","legend")
+					  .attr("class","omega3-legend")
 					  .attr("transform","translate(" + (scatter.width + 10) + ", " + (scatter.height - 300) + ")")
 					  .style("font-size","12px")
 					  .call(omega3.legend);
@@ -803,4 +814,5 @@
 	};
 
 	this.omega3 = omega3;
+	this.Ω3 = omega3;
 }();
