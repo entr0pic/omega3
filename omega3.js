@@ -192,10 +192,10 @@
 	};
 
 	omega3.addSearch = function (selector, nodesList, top, left, width) {
-		d3.select(selector + " .search").remove()
+		d3.select(selector + " .omega3-search").remove()
 		d3.select(selector)
 			.append("form")
-			.attr("class", "search")
+			.attr("class", "omega3-search omega3-extras")
 			.attr("role", "form")
 			.style("position", "relative")
 			.style("top", top || 0)
@@ -249,7 +249,9 @@
 	omega3.correlate = function (dataset, xColumn, yColumn) {
 		var xMean = d3.mean(dataset, function(d) {return d[xColumn];});
 		var yMean = d3.mean(dataset, function(d) {return d[yColumn];});
-		var xy = x2 = y2 = 0;
+		var xy =0;
+		var x2 = 0;
+		var y2 = 0;
 		dataset.forEach(function (d) {
 			var x = +d[xColumn];
 			var y = +d[yColumn]
@@ -294,8 +296,8 @@
 		scatter.radiusRange = null;
 		scatter.legendFunction = null;
 
-		scatter.yFormat = null;
-		scatter.xFormat = null;
+		scatter.yFormat = d3.format(",.2f");
+		scatter.xFormat = d3.format(",.2f");
 
 		scatter.setBinding = function (selector) {
 			scatter.bindingSelector = selector;
@@ -340,7 +342,12 @@
 		scatter.setTooltipHeaderValue = function(headerAccessor) {
 			scatter.tooltipHeader = function (d) { return d[headerAccessor]; }
 			return this;
-		}
+		};
+
+		scatter.setCustomLegendFunction = function (legendFunction) {
+			scatter.legendFunction = legendFunction;
+			return this;
+		};
 
 		scatter.customAxis = function(g) {
 		  g.selectAll("text")
@@ -443,6 +450,7 @@
 			//var scatter = this;
 			if (!resize)
 				d3.select(scatter.bindingSelector + ' svg').remove();
+				d3.select(scatter.bindingSelector + ' .omega3-extras').remove();
 
 			if (!scatter.customSize) {
 				var existingWidth = d3.select(scatter.bindingSelector).node().clientWidth;
@@ -541,20 +549,18 @@
 
 				var colourBucketSize = (maxValue - minValue) / scatter.colours.length;
 				var colourBuckets = [];
+				var colourBucketNames = [];
 
 				scatter.colours.forEach(function(d,i) {
-					colourBuckets.push(minValue + colourBucketSize*i);
+					var bucketValue = minValue + colourBucketSize*i;
+					colourBuckets.push(bucketValue);
+					colourBucketNames.push("Above " + bucketValue );
 				})
 
-				scatter.colourRange = d3.scale
-	    			.linear()
-	    			.domain(
-						colourBuckets
-					)
-					.range(scatter.colours);
+				
 
-				if (!scatter.legendFunction) {
-					scatter.legendFunction = function (d) {
+				if (!scatter.colourFunction) {
+					scatter.colourFunction = function (d) {
 						var yValue = scatter.yAccessor(d);
 						for (bucketKey in colourBuckets) {
 							var bucketValue = colourBuckets[bucketKey];
@@ -577,6 +583,13 @@
 						return -1;
 					};
 				}
+
+				scatter.colourRange = d3.scale
+	    			.ordinal()
+	    			.domain(
+						colourBucketNames
+					)
+					.range(scatter.colours);
 			}
 
 			if (!scatter.radiusAccessor) {
@@ -614,6 +627,10 @@
 	    		scatter.colourFunction = function(d) {
 	    			return scatter.colourRange(scatter.yAccessor(d))
 	    		};
+	    	} 
+
+	    	if (!scatter.legendFunction) {
+	    		scatter.legendFunction = scatter.colourFunction;
 	    	}
 
 			if (!resize) {
@@ -652,7 +669,7 @@
 				.attr("class", "node")
 		        .attr("cx", function(d) { return Math.random() * scatter.width; })
 		        .attr("cy", function(d) { return Math.random() * scatter.height; })
-				.attr("fill", scatter.colourFunction)
+				.attr("fill", function(d) { return scatter.colourRange(scatter.colourFunction(d))})
 				.attr('r', function(d) {return 0;})
 				.attr("omega3-legend", scatter.legendFunction)
 				.attr("omega3-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
@@ -668,13 +685,8 @@
 			scatter.circles
 				.on("mouseover",function(d,i) { 
 		          var el = d3.select(this)
-		          var xpos = Number(el.attr('cx'));
-		          var ypos = Number(el.attr('cy'));
+		          
 		          el.style("stroke","#AFAFAF").style("stroke-width",3);
-		          // d3.select("#tooltip")
-		          // 	.style('top',ypos+"px")
-		          // 	.style('left',xpos+"px")
-		          // 	.style('display','block')
 		          var parentWidth;
 		          if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
 		          	parentWidth = this.parentNode.width.baseVal.value;
@@ -706,6 +718,7 @@
 		          		.attr("height", tooltipHeight)
 		          		.attr("fill", "#FFF")
 		          		.attr("stroke", "lightgray")
+		          		.style("border-radius", "10px")
 		          		.attr("opacity", 0.9);
 
 		          if (scatter.tooltipHeader) {
