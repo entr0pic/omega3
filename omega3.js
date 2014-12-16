@@ -20,12 +20,12 @@
 		    lb.enter().append("rect").classed("legend-box",true)
 		    li.enter().append("g").classed("legend-items",true)
 		 
-		    svg.selectAll("[omega-legend]").each(function() {
+		    svg.selectAll("[omega3-legend]").each(function() {
 		        var self = d3.select(this)
-		        items[self.attr("omega-legend")] = {
-		          pos : self.attr("omega-legend-pos") || this.getBBox().y,
-		          color : self.attr("omega-legend-color") != undefined ? self.attr("omega-legend-color") : self.style("fill") != 'none' ? self.style("fill") : self.style("stroke"),
-		          shape : self.attr("omega-legend-shape") || defaultShape
+		        items[self.attr("omega3-legend")] = {
+		          pos : self.attr("omega3-legend-pos") || this.getBBox().y,
+		          color : self.attr("omega3-legend-color") != undefined ? self.attr("omega3-legend-color") : self.style("fill") != 'none' ? self.style("fill") : self.style("stroke"),
+		          shape : self.attr("omega3-legend-shape") || defaultShape
 		        }
 		      })
 		 
@@ -37,10 +37,10 @@
 		    
 		    var mouseover = function (d) {
 		    	highlightRecord = [];
-	        	d3.selectAll("[omega-legend]").each(function(){
+	        	d3.selectAll("[omega3-legend]").each(function(){
 	        		
 	        		var self = d3.select(this);
-	        		var legendName = self.attr("omega-legend");
+	        		var legendName = self.attr("omega3-legend");
 	        		
 	        		highlightRecord.push({node:self, opacity: self.attr("opacity") || 1});
 	        		if (d.key == legendName) {
@@ -654,8 +654,8 @@
 		        .attr("cy", function(d) { return Math.random() * scatter.height; })
 				.attr("fill", scatter.colourFunction)
 				.attr('r', function(d) {return 0;})
-				.attr("omega-legend", scatter.legendFunction)
-				.attr("omega-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
+				.attr("omega3-legend", scatter.legendFunction)
+				.attr("omega3-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
 				.call(scatter.force.drag)
 				.transition()
 				.delay(function(d,i) { return i * 25; })
@@ -668,33 +668,82 @@
 			scatter.circles
 				.on("mouseover",function(d,i) { 
 		          var el = d3.select(this)
-		          var xpos = Number(el.attr('cx'))
-		          var ypos = Number(el.attr('cy')) + 50
+		          var xpos = Number(el.attr('cx'));
+		          var ypos = Number(el.attr('cy'));
 		          el.style("stroke","#AFAFAF").style("stroke-width",3);
-		          d3.select("#tooltip").style('top',ypos+"px").style('left',xpos+"px").style('display','block')
-		          if (scatter.tooltipHeader) {
-		          	d3.select("#tooltip .tip-title").html(scatter.tooltipHeader(d))
+		          // d3.select("#tooltip")
+		          // 	.style('top',ypos+"px")
+		          // 	.style('left',xpos+"px")
+		          // 	.style('display','block')
+		          var parentWidth;
+		          if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
+		          	parentWidth = this.parentNode.width.baseVal.value;
 		          }
-		          var yTitle = xTitle = "";
+		          var tooltipWidth = 200;
+		          var tooltipHeight = 90;
+		          var textSpacing = 18;
+		          var lines = 0;
+		          var xCoord = +el.attr('cx') - tooltipWidth/2;
+		          var yCoord = +el.attr('cy') - d.radius - tooltipHeight - 5;
+		          if (yCoord < 0) {
+		          		yCoord = +el.attr('cy') + d.radius + 5
+		          } 
+
+		          if (xCoord < 0) {
+		          	xCoord = 0;
+		          } else if (parentWidth && xCoord + tooltipWidth > parentWidth) {
+		          	xCoord = parentWidth - tooltipWidth;
+		          }
+		          tooltip = svg
+		          		.append('g')
+		          		.attr("class", "omega3-tooltip")
+		          		.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
+		          tooltip
+		          		.append('rect')
+		          		.attr("x",0)
+		          		.attr("y",0)
+		          		.attr("width", tooltipWidth)
+		          		.attr("height", tooltipHeight)
+		          		.attr("fill", "#FFF")
+		          		.attr("stroke", "lightgray")
+		          		.attr("opacity", 0.9);
+
+		          if (scatter.tooltipHeader) {
+		          	tooltip.append("text")
+		          			.attr("color", "black")
+		          			.attr("class", "omega3-tooltip-header")
+		          			.attr("y", (textSpacing * lines++) + 30)
+		          			.attr("x", 30)
+		          			.text(scatter.tooltipHeader(d))
+		          }
+		          var yTitle = "Y: ";
+		          var xTitle = "X: ";
 		          if (scatter.yTitle) {
 		          	yTitle = scatter.yTitle + ": ";
 		          }
 		          if (scatter.xTitle) {
 		          	xTitle = scatter.xTitle + ": ";
 		          }
-		          d3.select("#tooltip .tip-text").html(yTitle 
-		          									+ scatter.yFormat(scatter.yAccessor(d))
-		          									+ "<br>"
-		          									+ xTitle
-		          									+ scatter.xFormat(scatter.xAccessor(d)) 
-		          									)
+
+				  tooltip.append("text")
+				  		.attr("color", "black")
+				  		.attr("x", 30)
+				  		.attr("y", (textSpacing * lines++) + 30)
+				  		.text(xTitle + scatter.xFormat(scatter.xAccessor(d)));
+
+				  tooltip.append("text")
+				  		.attr("color", "black")
+				  		.attr("x", 30)
+				  		.attr("y", (textSpacing * lines++) + 30)
+				  		.text(yTitle + scatter.yFormat(scatter.yAccessor(d)));
 		          
 		          })
 		        .on("mouseout",function(d,i) { 
 		          d3.select(this)
 		          .style("stroke-width",0)
 		          //.style("stroke", function(d){ return that.getStrokeColor(d); })
-		          d3.select("#tooltip").style('display','none')})
+		          d3.selectAll(".omega3-tooltip").remove()
+		      	})
 			
 			if (scatter.xAxis) {
 				svg.select("g.x.axis").remove();
@@ -727,7 +776,7 @@
 				svg.select(".legend").remove();
 				legend = svg.append("g")
 					  .attr("class","legend")
-					  .attr("transform","translate(" + (scatter.width + 50) + ", " + (scatter.height - 300) + ")")
+					  .attr("transform","translate(" + (scatter.width + 10) + ", " + (scatter.height - 300) + ")")
 					  .style("font-size","12px")
 					  .call(omega3.legend);
 			}
