@@ -9,137 +9,258 @@
 
 	omega3.baseClass = "omega3"
 
-	omega3.legend = function (g) {
+	omega3.legend = function (svg, allowSearch, size) {
 		var defaultShape = 'rect';
+		var items = {};
+		var legendPadding = 22;
+		var legendArea = size || 150;
+		svg.select(".omega3-legend").remove();
+		
+			  //.call(omega3.legend);
+		
+		svg.selectAll("[omega3-legend-data]").each(function() {
+			var self = d3.select(this)
+			items[self.attr("omega3-legend-data")] = {
+			  pos : self.attr("omega3-legend-pos") || this.getBBox().y,
+			  color : self.attr("omega3-legend-color") != undefined ? self.attr("omega3-legend-color") : self.style("fill") != 'none' ? self.style("fill") : self.style("stroke"),
+			  shape : self.attr("omega3-legend-shape") || defaultShape
+			}
+		  })
+	 
+		items = d3.entries(items).sort(function(a,b) { return a.value.pos-b.value.pos})
+		length = items.length;
+
+		var x =  svg.attr('width') - legendArea + 30;
+		var y = svg.attr('height') - 30 - (allowSearch ? 30 : 0) - legendPadding*items.length;
+		g = svg.append("g")
+			  .attr("class","omega3-legend")
+			  .attr("transform","translate(" + x + ", " + y + ")")
+			  .style("font-size","12px");
+
 		g.each(function() {
-		    var g= d3.select(this),
-		        items = {},
-		        svg = d3.select(g.property("nearestViewportElement")),
-		        legendPadding = g.attr("data-style-padding") || 20,
-		        lb = g.selectAll(".omega3-legend-box").data([true]),
-		        li = g.selectAll(".omega3-legend-items").data([true])
+			var g= d3.select(this),
+				lb = g.selectAll(".omega3-legend-box").data([true]),
+				li = g.selectAll(".omega3-legend-items").data([true])
 		 
-		    lb.enter().append("rect").classed("omega3-legend-box",true)
-		    li.enter().append("g").classed("omega3-legend-items",true)
-		 
-		    svg.selectAll("[omega3-legend-data]").each(function() {
-		        var self = d3.select(this)
-		        items[self.attr("omega3-legend-data")] = {
-		          pos : self.attr("omega3-legend-pos") || this.getBBox().y,
-		          color : self.attr("omega3-legend-color") != undefined ? self.attr("omega3-legend-color") : self.style("fill") != 'none' ? self.style("fill") : self.style("stroke"),
-		          shape : self.attr("omega3-legend-shape") || defaultShape
-		        }
-		      })
-		 
-		    items = d3.entries(items).sort(function(a,b) { return a.value.pos-b.value.pos})
-		 	
-		 	var sele
+			lb.enter().append("rect").classed("omega3-legend-box",true)
+			li.enter().append("g").classed("omega3-legend-items",true)
+		
 
-		 	var highlightRecord = [];
-		    
-		    var mouseover = function (d) {
-		    	highlightRecord = [];
-	        	d3.selectAll("[omega3-legend-data]").each(function(){
-	        		
-	        		var self = d3.select(this);
-	        		var legendName = self.attr("omega3-legend-data");
-	        		
-	        		highlightRecord.push({node:self, opacity: self.attr("opacity") || 1});
-	        		if (d.key == legendName) {
-	        			self.attr("opacity", 1);
-	        		} else {
-	        			self.attr("opacity", 0.2);
-	        		}
-	        	})
-		    };
+			var highlightRecord = [];
+			
+			var mouseover = function (d) {
+				highlightRecord = [];
+				svg.selectAll(".omega3-data-point").each(function(){
+					
+					var self = d3.select(this);
+					var legendName = self.attr("omega3-legend-data");
+					
+					highlightRecord.push({node:self, opacity: self.attr("opacity") || 1});
+					if (d.key == legendName) {
+						self.attr("opacity", 1);
+					} else {
+						self.attr("opacity", 0.2);
+					}
+				})
+			};
 
-		    var mouseleave = function () {
-		    	highlightRecord.forEach(function(entry) {
-	        		entry.node.attr("opacity", entry.opacity);
-	        	});
-		    }
+			var mouseleave = function () {
+				highlightRecord.forEach(function(entry) {
+					entry.node.attr("opacity", entry.opacity);
+				});
+			}
 
-		    var text = li.selectAll("text")
-		        .data(items,function(d) { return d.key});
-		    
-		    text
-		        .enter()
-		        .append("text")
-		        .attr("y",function(d,i) { return (i*2)+"em"})
-		        .attr("x","1em")
-		        .text(function(d) { ;return d.key})
-		        .on("mouseover", mouseover)
-		        .on("mouseleave", mouseleave)
-		    
-		    text.exit().remove();
-		    
-		    var circles = li.selectAll("circle")
-		        .data(items.filter(function(item, index) { 
-		                // save original index
-		                item.value.index = index;
-		                return item.value.shape == 'circle'
-		            }),
-		        	function(d) { return d.key}
-		        );
-		    
-		    circles.enter()
-		    	.append('circle')
-		        .attr("cy",function(d) { return (d.value.index*2)-0.25+"em"})
-		       	.attr("cx",0)
-		        .attr("r","0.5em")
-		        .style("fill",function(d) { return d.value.color})  
-		        .on("mouseover", mouseover)
-		        .on("mouseleave", mouseleave);
+			var text = li.selectAll("text")
+				.data(items,function(d) { return d.key});
+			
+			text
+				.enter()
+				.append("text")
+				.attr("y",function(d,i) { return (i*2)+"em"})
+				.attr("x","1em")
+				.text(function(d) { ;return d.key})
+				.on("mouseover", mouseover)
+				.on("mouseleave", mouseleave)
+			
+			text.exit().remove();
+			
+			var circles = li.selectAll("circle")
+				.data(items.filter(function(item, index) { 
+						// save original index
+						item.value.index = index;
+						return item.value.shape == 'circle'
+					}),
+					function(d) { return d.key}
+				);
+			
+			circles.enter()
+				.append('circle')
+				.attr("cy",function(d) { return (d.value.index*2)-0.25+"em"})
+				.attr("cx",0)
+				.attr("r","0.5em")
+				.style("fill",function(d) { return d.value.color})  
+				.on("mouseover", mouseover)
+				.on("mouseleave", mouseleave);
 
-		    circles.exit().remove();
+			circles.exit().remove();
 
-		    var lines = li.selectAll("line")
-		        .data(items.filter(function(item, index) { 
-		                // save original index
-		                item.value.index = index;
-		                return item.value.shape == 'line'
-		            }),
-		            function(d) { return d.key});
-		    lines.enter()
-		    	.append('line')
-		        .attr("x1", "-0.4em")
-		        .attr("x2", "0.4em")
-		        .attr("y1", function(d) { return ((d.value.index*2)-0.4)+"em"})
-		        .attr("y2", function(d) { return ((d.value.index*2)-0.4)+"em"})
-		        .attr("stroke-width", 2)
-		        .attr("stroke", function(d) { return d.value.color})
-		        .on("mouseover", mouseover)
-		        .on("mouseleave", mouseleave);
+			var lines = li.selectAll("line")
+				.data(items.filter(function(item, index) { 
+						// save original index
+						item.value.index = index;
+						return item.value.shape == 'line'
+					}),
+					function(d) { return d.key});
+			lines.enter()
+				.append('line')
+				.attr("x1", "-0.4em")
+				.attr("x2", "0.4em")
+				.attr("y1", function(d) { return ((d.value.index*2)-0.4)+"em"})
+				.attr("y2", function(d) { return ((d.value.index*2)-0.4)+"em"})
+				.attr("stroke-width", 2)
+				.attr("stroke", function(d) { return d.value.color})
+				.on("mouseover", mouseover)
+				.on("mouseleave", mouseleave);
 
-		    lines.exit().remove()
+			lines.exit().remove()
 
-		    var rects = li.selectAll("rect")
-		        .data(items.filter(function(item, index) { 
-		                // save original index
-		                item.value.index = index;
-		                return item.value.shape == 'rect'
-		            }),
-		            function(d) { return d.key});
-		    rects.enter()
-		    	.append('rect')
-		        .attr("x", "-0.4em")
-		        .attr("width", "0.8em")
-		        .attr("y", function(d,i) { return (d.value.index*2)-0.8+"em"})
-		      	.attr("height", "0.8em")
-		        .style("fill",function(d) { return d.value.color})
-		        .on("mouseover", mouseover)
-		        .on("mouseleave", mouseleave);  
+			var rects = li.selectAll("rect")
+				.data(items.filter(function(item, index) { 
+						// save original index
+						item.value.index = index;
+						return item.value.shape == 'rect'
+					}),
+					function(d) { return d.key});
+			rects.enter()
+				.append('rect')
+				.attr("x", "-0.4em")
+				.attr("width", "0.8em")
+				.attr("y", function(d,i) { return (d.value.index*2)-0.8+"em"})
+				.attr("height", "0.8em")
+				.style("fill",function(d) { return d.value.color})
+				.on("mouseover", mouseover)
+				.on("mouseleave", mouseleave);  
 
-		    rects.exit().remove()
+			rects.exit().remove()
 
-		    // Reposition and resize the box
-		    var lbbox = li[0][0].getBBox()  
-		    lb.attr("x",(lbbox.x-legendPadding))
-		        .attr("y",(lbbox.y-legendPadding))
-		        .attr("height",(lbbox.height+2*legendPadding))
-		        .attr("width",(lbbox.width+2*legendPadding))
+			// Reposition and resize the box
+			var lbbox = li[0][0].getBBox()  
+			lb.attr("x",(lbbox.x-legendPadding))
+				.attr("y",(lbbox.y-legendPadding))
+				.attr("height",(lbbox.height+2*legendPadding))
+				.attr("width",(lbbox.width+2*legendPadding))
 		  });
 		return g;
+	};
+
+	omega3.tooltip = function (tooltipFunctions, tooltipHeader) {
+
+		return function (g) {
+
+			var svg = d3.select(g.property("nearestViewportElement"));
+			var colour = g.attr("omega3-legend-color") != undefined ? g.attr("omega3-legend-color") : g.style("fill") != 'none' ? g.style("fill") : g.style("stroke");
+			var shape = g.attr("omega3-legend-shape") || "rect";
+
+			g.on("mouseover",function(d,i) { 
+				
+				var titleWidth =  5 * d3.max(tooltipFunctions, function (t) {return t.title.length;});
+				var contentWidth =  7 * d3.max(tooltipFunctions, function (t) {return t.contentFunction(d).toString().length;});
+				
+				var minWidth = 10 + titleWidth + 15 + contentWidth + 10;
+
+				if (tooltipHeader) {
+					var headerWidth = 10 * tooltipHeader(d).toString().length + 20;
+					minWidth = Math.max(minWidth, headerWidth);
+				}
+				var el = d3.select(this)
+				 
+				//el.style("stroke", colour).style("stroke-width",4);
+				var parentWidth = svg.attr("width");
+				// if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
+				// 	parentWidth = this.parentNode.width.baseVal.value;
+				// }
+				var tooltipWidth = Math.max(60, minWidth);
+				var textSpacing = 22;
+				var tooltipHeight = (tooltipHeader ? 25 : 10) +
+									textSpacing * tooltipFunctions.length + 15;
+				
+				var lines = 0;
+				var x = el.attr('x') || el.attr('cx') || el.attr('dx');  
+				var y = el.attr('y') || el.attr('cy') || el.attr('dy');  
+				var xCoord = +x - tooltipWidth/2;
+				var yCoord = +y - d.radius - tooltipHeight - 5;
+
+				if (yCoord < 0) {
+					yCoord = +el.attr('cy') + d.radius + 5
+				} 
+				if (xCoord < 0) {
+					xCoord = 0;
+				} else if (parentWidth && xCoord + tooltipWidth > parentWidth) {
+					xCoord = parentWidth - tooltipWidth;
+				}
+
+				tooltip = svg
+					.append('g')
+					.attr("class", "omega3-tooltip")
+					.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
+
+				tooltip
+					.append('rect')
+					.attr("x",0)
+					.attr("y",0)
+					.attr("width", tooltipWidth)
+					.attr("height", tooltipHeight)
+					.attr("fill", "#FFF")
+					.attr("stroke", "lightgray")
+
+					.attr("opacity", 0.9);
+
+				if (tooltipHeader) {
+					tooltip.append("text")
+						.attr("color", "black")
+						.attr("class", "omega3-tooltip-header")
+						.attr("y", (textSpacing * lines++) + 25)
+						.attr("x", tooltipWidth/2)
+						.attr("text-anchor", "middle")
+						.text(tooltipHeader(d))
+
+					tooltip.append("line")
+						.attr("class", "omega3-tooltip-header-border")
+						.attr("stroke" , "#EFEFEF")
+						.attr("stroke-width" , 1)
+						.attr("x1", 0)
+						.attr("x2", tooltipWidth)
+						.attr("y1",  (textSpacing * lines) + 12)
+						.attr("y2",  (textSpacing * lines) + 12);
+				}
+
+				tooltipFunctions.forEach(function (t) {
+					tooltip.append("text")
+						.attr("class", "omega3-tooltip-data-title")
+						.attr("color", "black")
+						.attr("x", 10)
+						.attr("y", (textSpacing * lines) + 30)
+						.style("font-weight", 600)
+						.text(t.title);
+
+					tooltip.append("text")
+						.attr("class", "omega3-tooltip-data-content")
+						.attr("color", "black")
+						.attr("x", 10 + titleWidth + 15)
+						.attr("y", (textSpacing * lines) + 30)
+						.text(t.contentFunction(d));
+
+					lines++;
+				});
+				
+			})
+			.on("mouseout",function(d,i) { 
+				d3.select(this)
+				  //.style("stroke-width",0)
+				  //.style("stroke", function(d){ return that.getStrokeColor(d); })
+				d3.selectAll(".omega3-tooltip").remove()
+			});
+		};
 	};
 
 	omega3.colours = function () {
@@ -198,10 +319,8 @@
 		d3.select(selector)
 			.append("form")
 			.attr("class", "omega3-search omega3-extras")
-			//.attr("role", "form")
-			.style("position", "relative")
-			.style("top", top || 0)
-			.style("left", left || 0)
+			.style("top", (top || 0) + "px")
+			.style("left", (left || 0) + "px")
 			.append("input")
 			.attr("class", "search")
 			.attr("type", "text")
@@ -215,37 +334,37 @@
 	};
 
 	omega3.clone = function (obj) {
-	    var copy;
+		var copy;
 
-	    // Handle the 3 simple types, and null or undefined
-	    if (null == obj || "object" != typeof obj) return obj;
+		// Handle the 3 simple types, and null or undefined
+		if (null == obj || "object" != typeof obj) return obj;
 
-	    // Handle Date
-	    if (obj instanceof Date) {
-	        copy = new Date();
-	        copy.setTime(obj.getTime());
-	        return copy;
-	    }
+		// Handle Date
+		if (obj instanceof Date) {
+			copy = new Date();
+			copy.setTime(obj.getTime());
+			return copy;
+		}
 
-	    // Handle Array
-	    if (obj instanceof Array) {
-	        copy = [];
-	        for (var i = 0, len = obj.length; i < len; i++) {
-	            copy[i] = this.clone(obj[i]);
-	        }
-	        return copy;
-	    }
+		// Handle Array
+		if (obj instanceof Array) {
+			copy = [];
+			for (var i = 0, len = obj.length; i < len; i++) {
+				copy[i] = this.clone(obj[i]);
+			}
+			return copy;
+		}
 
-	    // Handle Object
-	    if (obj instanceof Object) {
-	        copy = {};
-	        for (var attr in obj) {
-	            if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
-	        }
-	        return copy;
-	    }
+		// Handle Object
+		if (obj instanceof Object) {
+			copy = {};
+			for (var attr in obj) {
+				if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
+			}
+			return copy;
+		}
 
-	    throw new Error("Unable to copy obj! Its type isn't supported.");
+		throw new Error("Unable to copy obj! Its type isn't supported.");
 	};
 
 	omega3.correlate = function (dataset, xColumn, yColumn) {
@@ -282,6 +401,9 @@
 		scatter.axisPaddingPercent = 0.05;
 		scatter.circles = null;
 		scatter.legendArea = 150;
+		scatter.allowSearch = true;
+		scatter.tooltipFunctions = [];
+		scatter.tooltipHeader = null;
 
 		scatter.force = null;
 		scatter.gravity = 0;
@@ -289,8 +411,11 @@
 		scatter.chargeDistance = 40;
 
 		scatter.xAccessor = null;
+		scatter.xColumn = null;
 		scatter.yAccessor = null;
+		scatter.yColumn = null;
 		scatter.radiusAccessor = null;
+		scatter.radiusColumn = null;
 		scatter.xAxis = null;
 		scatter.yAxis = null;
 		scatter.xRange = null;
@@ -299,25 +424,28 @@
 		scatter.legendFunction = null;
 
 		scatter.yFormat = d3.format(",.2f");
-		scatter.xFormat = d3.format(",.2f");
+		scatter.xFormat = function (d) {return isNaN(+d) ? d : d3.format(",.2f")(d)};
 
 		scatter.setBinding = function (selector) {
 			scatter.bindingSelector = selector;
 			return this;
 		};
 
-		scatter.xAxisValue = function (xAccessor) {
-			scatter.xAccessor = function (d) { return d[xAccessor]};
+		scatter.xAxisValue = function (xColumn) {
+			scatter.xColumn = xColumn;
+			scatter.xAccessor = function (d) { return d[xColumn]};
 			return this;
 		};
 
-		scatter.yAxisValue = function (yAccessor) {
-			scatter.yAccessor = function (d) { return d[yAccessor]};
+		scatter.yAxisValue = function (yColumn) {
+			scatter.yColumn = yColumn;
+			scatter.yAccessor = function (d) { return d[yColumn]};
 			return this;
 		};
 
-		scatter.radiusValue = function (radiusAccessor) {
-			scatter.radiusAccessor = function (d) { return d[radiusAccessor]};
+		scatter.radiusValue = function (radiusColumn) {
+			scatter.radiusColumn = radiusColumn;
+			scatter.radiusAccessor = function (d) { return d[radiusColumn]};
 			return this;
 		}
 
@@ -353,8 +481,8 @@
 
 		scatter.customAxis = function(g) {
 		  g.selectAll("text")
-		      .attr("x", 4)
-		      .attr("dy", -4);
+			  .attr("x", 4)
+			  .attr("dy", -4);
 		};
 
 		scatter.setColourFunction = function (colourFunction) {
@@ -372,23 +500,23 @@
 
 		scatter.collide = function(node) {
 		 var r = node.radius + 16,
-		     nx1 = node.x - r,
-		     nx2 = node.x + r,
-		     ny1 = node.y - r,
-		     ny2 = node.y + r;
+			 nx1 = node.x - r,
+			 nx2 = node.x + r,
+			 ny1 = node.y - r,
+			 ny2 = node.y + r;
 		 return function(quad, x1, y1, x2, y2) {
 		   if (quad.point && (quad.point !== node)) {
-		     var x = node.x - quad.point.x,
-		         y = node.y - quad.point.y,
-		         l = Math.sqrt(x * x + y * y),
-		         r = node.radius + quad.point.radius;
-		     if (l < r) {
-		       l = (l - r) / l * .5;
-		       node.x -= x *= l;
-		       node.y -= y *= l;
-		       quad.point.x += x;
-		       quad.point.y += y;
-		     }
+			 var x = node.x - quad.point.x,
+				 y = node.y - quad.point.y,
+				 l = Math.sqrt(x * x + y * y),
+				 r = node.radius + quad.point.radius;
+			 if (l < r) {
+			   l = (l - r) / l * .5;
+			   node.x -= x *= l;
+			   node.y -= y *= l;
+			   quad.point.x += x;
+			   quad.point.y += y;
+			 }
 		   }
 		   return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
 		 };
@@ -427,14 +555,14 @@
 			});
 
 			var q = d3.geom.quadtree(scatter.nodes),
-			     i = 0,
-			     n = scatter.nodes.length;
+				 i = 0,
+				 n = scatter.nodes.length;
 
-		 	while (++i < n) q.visit(scatter.collide(scatter.nodes[i]));
+			while (++i < n) q.visit(scatter.collide(scatter.nodes[i]));
 
 			scatter.circles
-		     .attr("cx", function(d) { return d.x })
-		     .attr("cy", function(d) { return d.y});
+			 .attr("cx", function(d) { return d.x })
+			 .attr("cy", function(d) { return d.y});
 
 		   //scatter.force.start();
 		};
@@ -487,16 +615,65 @@
 					   .size([scatter.width - (scatter.padding*2), scatter.height - (scatter.padding*2)])
 					   .on("tick", scatter.tick);
 			
-			var xType = 'linear';
-			var yType = 'linear';
+			if (!scatter.radiusAccessor) {
+				scatter.radiusAccessor = function () {return scatter.radius};		
+			} 
+			
+			scatter.radiusRange = d3.scale
+					.linear()
+					.domain(
+						[
+							d3.min(scatter.data, scatter.radiusAccessor),
+							d3.max(scatter.data, scatter.radiusAccessor)
+						]
+					)
+					.range([8, 30]);
+
+			scatter.xType;
+			scatter.yType;
+
+			if (!resize) {
+				scatter.xType = 'linear';
+				scatter.yType = 'linear';
+				scatter.data.forEach(function (row, i) {
+					var node = omega3.clone(row);
+					node.radius = scatter.radiusRange(scatter.radiusAccessor(row));
+					scatter.nodes.push(node);
+
+					if (scatter.xAccessor) {
+						var xNumberTest = +scatter.xAccessor(row);
+						if(isNaN(xNumberTest)) {
+							scatter.xType = 'ordinal';
+						}
+					}
+
+					var yNumberTest = +scatter.yAccessor(row);
+					if(isNaN(yNumberTest)) {
+						scatter.yType = 'ordinal';
+					}
+				});
+			}
+			
 
 			if (scatter.xAccessor) {
 
-				if (xType == 'ordinal') {
+				if (scatter.xType == 'ordinal') {
+					var ordinalValues = scatter.data.map(scatter.xAccessor);
 					scatter.xRange = d3.scale
 						.ordinal()
 						.domain(scatter.data.map(scatter.xAccessor))
 						.rangePoints([scatter.padding, scatter.width - scatter.padding],5);
+
+					scatter.xAxis = d3
+						.svg
+						.axis()
+						.scale(scatter.xRange)
+						.tickValues(scatter.data.map(scatter.xAccessor).filter(
+							function (d,i) {
+								return !(i % 6);
+							}))
+						.orient("bottom");
+
 				} else {
 					
 					var axisEnd = Math.max(1,d3.max(scatter.data, scatter.xAccessor)) * (1+scatter.axisPaddingPercent);
@@ -509,32 +686,44 @@
 							]
 						)
 						.range([scatter.padding, scatter.width - scatter.padding]);
+
+					scatter.xAxis = d3
+						.svg
+						.axis()
+						.scale(scatter.xRange)
+						.ticks(6)
+						.orient("bottom");
 				}
 				
-				scatter.xAxis = d3
-					.svg
-					.axis()
-					.scale(scatter.xRange)
-					.tickPadding(10)
-					.orient("bottom");
+				
 
 				if (scatter.xFormat) {
-		    		scatter.xAxis.tickFormat(scatter.xFormat);
-		    	} else {
-		    		scatter.xFormat = function (d) { return d; };
-		    	}
+					scatter.xAxis.tickFormat(scatter.xFormat);
+				} else {
+					scatter.xFormat = function (d) { return d; };
+				}
 			}
 
-			if (yType == 'ordinal') {
+			if (scatter.colourFunction) {
+				scatter.colourRange = d3.scale
+						.ordinal()
+						.domain(scatter.data.map(scatter.colourFunction))
+						.range(scatter.colours);
+			}
+
+			if (scatter.yType == 'ordinal') {
 				scatter.yRange = d3.scale
 					.ordinal()
 					.domain(scatter.data.map(scatter.yAccessor))
 					.rangePoints([scatter.height-scatter.padding, scatter.padding],5);
 
-				scatter.colourRange = d3.scale
-	    			.ordinal()
-					.domain(scatter.data.map(scatter.yAccessor))
-					.range(scatter.colours);
+				if (!scatter.colourFunction) {
+					scatter.colourRange = d3.scale
+						.ordinal()
+						.domain(scatter.data.map(scatter.yAccessor))
+						.range(scatter.colours);
+				}
+
 			} else {
 				var minValue = Math.min(1,d3.min(scatter.data, scatter.yAccessor));
 				var maxValue = Math.max(1,d3.max(scatter.data, scatter.yAccessor));
@@ -562,7 +751,7 @@
 
 				
 
-				if (!scatter.colourFunction) {
+				if (!scatter.colourFunction && scatter.bucketColours) {
 					scatter.colourFunction = function (d) {
 						var yValue = scatter.yAccessor(d);
 						for (bucketKey in colourBuckets) {
@@ -585,93 +774,87 @@
 
 						return -1;
 					};
+
+					scatter.colourRange = d3.scale
+						.ordinal()
+						.domain(
+							colourBucketNames
+						)
+						.range(scatter.colours);
+
+				} else if (!scatter.colourFunction) {
+					scatter.colourFunction = function (d) { return scatter.yColumn; };
+					scatter.legendPosition = function (d) { return 0; };
+					scatter.colourRange = d3.scale
+						.ordinal()
+						.domain(
+							[scatter.yColumn]
+						)
+						.range(scatter.colours);
+				} else {
+
 				}
 
-				scatter.colourRange = d3.scale
-	    			.ordinal()
-	    			.domain(
-						colourBucketNames
-					)
-					.range(scatter.colours);
-			}
-
-			if (!scatter.radiusAccessor) {
-				scatter.radiusAccessor = function () {return scatter.radius};		
-			} else {
 				
 			}
-		    
-		    scatter.radiusRange = d3.scale
-					.linear()
-					.domain(
-						[
-							d3.min(scatter.data, scatter.radiusAccessor),
-							d3.max(scatter.data, scatter.radiusAccessor)
-						]
-					)
-					.range([8, 30]);
 
-		    scatter.yAxis = d3
-	    			.svg
-	    			.axis()
-	    			.scale(scatter.yRange)
-	    			.ticks(4)
-	    			.orient("right");
+			scatter.yAxis = d3
+					.svg
+					.axis()
+					.scale(scatter.yRange)
+					.ticks(4)
+					.orient("right");
 
 
 
-	    	if (scatter.yFormat) {
-	    		scatter.yAxis.tickFormat(scatter.yFormat);
-	    	} else {
-	    		scatter.yFormat = function (d) { return d; }
-	    	}
-
-	    	if (!scatter.colourFunction) {
-	    		scatter.colourFunction = function(d) {
-	    			return scatter.colourRange(scatter.yAccessor(d))
-	    		};
-	    	} 
-
-	    	if (!scatter.legendFunction) {
-	    		scatter.legendFunction = scatter.colourFunction;
-	    	}
-
-			if (!resize) {
-				scatter.data.forEach(function (row, i) {
-					var node = omega3.clone(row);
-					node.radius = scatter.radiusRange(scatter.radiusAccessor(row));
-					scatter.nodes.push(node);
-
-					if (scatter.xAccessor) {
-						var xNumberTest = +scatter.xAccessor(row);
-						if(isNaN(xNumberTest)) {
-							xType = 'ordinal';
-						}
-					}
-
-					var yNumberTest = +scatter.yAccessor(row);
-					if(isNaN(yNumberTest)) {
-						yType = 'ordinal';
-					}
-				});
+			if (scatter.yFormat) {
+				scatter.yAxis.tickFormat(scatter.yFormat);
+			} else {
+				scatter.yFormat = function (d) { return d; }
 			}
+
+			if (!scatter.colourFunction) {
+				scatter.colourFunction = function(d) {
+					return scatter.colourRange(scatter.yAccessor(d))
+				};
+			} 
+
+			if (!scatter.legendFunction) {
+				scatter.legendFunction = scatter.colourFunction;
+			}
+
+			scatter.tooltipFunctions.push({
+				title:(scatter.yTitle || scatter.yColumn),
+				contentFunction: function (d) {return scatter.yFormat(scatter.yAccessor(d));}
+			})	
+
+			scatter.tooltipFunctions.push({
+				title:(scatter.xTitle || scatter.xColumn),
+				contentFunction: function (d) {return scatter.xFormat(scatter.xAccessor(d));}
+			})	
+
+			if (scatter.radiusColumn) {
+				scatter.tooltipFunctions.push({
+					title:(scatter.radiusTitle || scatter.radiusColumn),
+					contentFunction: function (d) {return scatter.radiusAccessor(d);}
+				})	
+			}			
+
+			var tooltip = omega3.tooltip(scatter.tooltipFunctions, scatter.tooltipHeader);
 			
 
+			var yAvg = d3.mean(scatter.data, scatter.yAccessor);
 
-			
-
-	    	var yAvg = d3.mean(scatter.data, scatter.yAccessor);
-
-	    	scatter.circles = svg
+			scatter.circles = svg
 				.selectAll('circle')
 				.data(scatter.nodes);
 
 			scatter.circles
 				.enter()
 				.append('circle')
-				.attr("class", "node")
-		        .attr("cx", function(d) { return Math.random() * scatter.width; })
-		        .attr("cy", function(d) { return Math.random() * scatter.height; })
+				.attr("class", "omega3-data-point")
+				.attr("cx", function(d) { return Math.random() * scatter.width; })
+				.attr("cy", function(d) { return Math.random() * scatter.height; })
 				.attr("fill", function(d) { return scatter.colourRange(scatter.colourFunction(d))})
 				.attr('r', function(d) {return 0;})
 				.attr("omega3-legend-data", scatter.legendFunction)
@@ -681,93 +864,87 @@
 				.delay(function(d,i) { return i * 25; })
 				.ease("linear")
 				.attr("cx", function(d) { return d.x; })
-		        .attr("cy", function(d) { return d.y; })
-		        .attr('r', function(d) {return scatter.radiusRange(scatter.radiusAccessor(d));})
+				.attr("cy", function(d) { return d.y; })
+				.attr('r', function(d) {return scatter.radiusRange(scatter.radiusAccessor(d));})
 				;
 
-			scatter.circles
-				.on("mouseover",function(d,i) { 
-		          var el = d3.select(this)
-		          
-		          el.style("stroke","#AFAFAF").style("stroke-width",3);
-		          var parentWidth;
-		          if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
-		          	parentWidth = this.parentNode.width.baseVal.value;
-		          }
-		          var tooltipWidth = 200;
-		          var tooltipHeight = 90;
-		          var textSpacing = 18;
-		          var lines = 0;
-		          var xCoord = +el.attr('cx') - tooltipWidth/2;
-		          var yCoord = +el.attr('cy') - d.radius - tooltipHeight - 5;
-		          if (yCoord < 0) {
-		          		yCoord = +el.attr('cy') + d.radius + 5
-		          } 
+			scatter.circles.call(tooltip);
+				// .on("mouseover",function(d,i) { 
+				//   var el = d3.select(this)
+				  
+				//   el.style("stroke","#AFAFAF").style("stroke-width",3);
+				//   var parentWidth;
+				//   if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
+				// 	parentWidth = this.parentNode.width.baseVal.value;
+				//   }
+				//   var tooltipWidth = 200;
+				//   var tooltipHeight = 90;
+				//   var textSpacing = 18;
+				//   var lines = 0;
+				//   var xCoord = +el.attr('cx') - tooltipWidth/2;
+				//   var yCoord = +el.attr('cy') - d.radius - tooltipHeight - 5;
+				//   if (yCoord < 0) {
+				// 		yCoord = +el.attr('cy') + d.radius + 5
+				//   } 
 
-		          if (xCoord < 0) {
-		          	xCoord = 0;
-		          } else if (parentWidth && xCoord + tooltipWidth > parentWidth) {
-		          	xCoord = parentWidth - tooltipWidth;
-		          }
-		          tooltip = svg
-		          		.append('g')
-		          		.attr("class", "omega3-tooltip")
-		          		.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
-		          tooltip
-		          		.append('rect')
-		          		.attr("x",0)
-		          		.attr("y",0)
-		          		.attr("width", tooltipWidth)
-		          		.attr("height", tooltipHeight)
-		          		.attr("fill", "#FFF")
-		          		.attr("stroke", "lightgray")
-		          		.style("border-radius", "10px")
-		          		.attr("opacity", 0.9);
+				//   if (xCoord < 0) {
+				// 	xCoord = 0;
+				//   } else if (parentWidth && xCoord + tooltipWidth > parentWidth) {
+				// 	xCoord = parentWidth - tooltipWidth;
+				//   }
+				//   tooltip = svg
+				// 		.append('g')
+				// 		.attr("class", "omega3-tooltip")
+				// 		.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
+				//   tooltip
+				// 		.append('rect')
+				// 		.attr("x",0)
+				// 		.attr("y",0)
+				// 		.attr("width", tooltipWidth)
+				// 		.attr("height", tooltipHeight)
+				// 		.attr("fill", "#FFF")
+				// 		.attr("stroke", "lightgray")
+				// 		.style("border-radius", "10px")
+				// 		.attr("opacity", 0.9);
 
-		          if (scatter.tooltipHeader) {
-		          	tooltip.append("text")
-		          			.attr("color", "black")
-		          			.attr("class", "omega3-tooltip-header")
-		          			.attr("y", (textSpacing * lines++) + 30)
-		          			.attr("x", 30)
-		          			.text(scatter.tooltipHeader(d))
-		          }
-		          var yTitle = "Y: ";
-		          var xTitle = "X: ";
-		          if (scatter.yTitle) {
-		          	yTitle = scatter.yTitle + ": ";
-		          }
-		          if (scatter.xTitle) {
-		          	xTitle = scatter.xTitle + ": ";
-		          }
+				//   if (scatter.tooltipHeader) {
+				// 	tooltip.append("text")
+				// 			.attr("color", "black")
+				// 			.attr("class", "omega3-tooltip-header")
+				// 			.attr("y", (textSpacing * lines++) + 30)
+				// 			.attr("x", 30)
+				// 			.text(scatter.tooltipHeader(d))
+				//   }
+				//   var yTitle = (scatter.yTitle || scatter.yColumn) + ": ";
+				//   var xTitle = (scatter.xTitle || scatter.xColumn) + ": ";
 
-				  tooltip.append("text")
-				  		.attr("color", "black")
-				  		.attr("x", 30)
-				  		.attr("y", (textSpacing * lines++) + 30)
-				  		.text(xTitle + scatter.xFormat(scatter.xAccessor(d)));
+				//   tooltip.append("text")
+				// 		.attr("color", "black")
+				// 		.attr("x", 30)
+				// 		.attr("y", (textSpacing * lines++) + 30)
+				// 		.text(xTitle + scatter.xFormat(scatter.xAccessor(d)));
 
-				  tooltip.append("text")
-				  		.attr("color", "black")
-				  		.attr("x", 30)
-				  		.attr("y", (textSpacing * lines++) + 30)
-				  		.text(yTitle + scatter.yFormat(scatter.yAccessor(d)));
-		          
-		          })
-		        .on("mouseout",function(d,i) { 
-		          d3.select(this)
-		          .style("stroke-width",0)
-		          //.style("stroke", function(d){ return that.getStrokeColor(d); })
-		          d3.selectAll(".omega3-tooltip").remove()
-		      	})
+				//   tooltip.append("text")
+				// 		.attr("color", "black")
+				// 		.attr("x", 30)
+				// 		.attr("y", (textSpacing * lines++) + 30)
+				// 		.text(yTitle + scatter.yFormat(scatter.yAccessor(d)));
+				  
+				//   })
+				// .on("mouseout",function(d,i) { 
+				//   d3.select(this)
+				//   .style("stroke-width",0)
+				//   //.style("stroke", function(d){ return that.getStrokeColor(d); })
+				//   d3.selectAll(".omega3-tooltip").remove()
+				// })
 			
 			if (scatter.xAxis) {
 				svg.select("g.x.axis").remove();
 				// Add the x-axis.
 				svg.append("g")
 				  .attr("class", "x axis")
-			      .attr("transform", "translate(" + 0 + "," + (scatter.height/2) + ")")
-			      .call(scatter.xAxis);
+				  .attr("transform", "translate(" + 0 + "," + (scatter.height/2) + ")")
+				  .call(scatter.xAxis);
 			}
 			
 
@@ -780,34 +957,29 @@
 			  //.call(scatter.customAxis);
 			
 			svg.selectAll(".tick")
-			    .each(function (d) {
-			        if ( d === 0 ) {
-			            this.remove();
-			        }
-			    });
+				.each(function (d) {
+					if ( d === 0 ) {
+						this.remove();
+					}
+				});
 
 			scatter.force.start();
 
 			if (!scatter.hideSearch) {
 				omega3.addSearch(scatter.bindingSelector,
-					 			[scatter.circles], 
-					 			-scatter.padding - 20, 
-					 			scatter.width + 10, 
-					 			scatter.legendArea - 25)
+								[scatter.circles], 
+								-scatter.padding - 30, 
+								scatter.width + 5, 
+								scatter.legendArea - 25)
 			}
 
 			if (scatter.showLegend && scatter.legendFunction) {
-				svg.select(".omega3-legend").remove();
-				legend = svg.append("g")
-					  .attr("class","omega3-legend")
-					  .attr("transform","translate(" + (scatter.width + 10) + ", " + (scatter.height - 300) + ")")
-					  .style("font-size","12px")
-					  .call(omega3.legend);
+				omega3.legend(svg, scatter.allowSearch, scatter.legendArea);
 			}
 
 			d3.select(window).on("resize", scatter.resize);
 
-	    	return this;
+			return this;
 		};
 
 		return scatter;

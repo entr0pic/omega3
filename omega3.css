@@ -33,3 +33,12 @@
 	stroke:none;
 	opacity:0.8;
 }
+
+.omega3-search {
+	position: relative;
+}
+
+.omega3-tooltip-header {
+font-size: 17px;
+font-weight: bold;
+}
