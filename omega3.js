@@ -163,10 +163,12 @@
 
 			g.on("mouseover",function(d,i) { 
 				
-				var titleWidth =  5 * d3.max(tooltipFunctions, function (t) {return t.title.length;});
-				var contentWidth =  7 * d3.max(tooltipFunctions, function (t) {return t.contentFunction(d).toString().length;});
+				var titleWidth =  8 * d3.max(tooltipFunctions, function (t) {return t.title.length;});
+				var contentWidth =  8 * d3.max(tooltipFunctions, function (t) {
+					return t.contentFunction(d).toString().length;
+				});
 				
-				var minWidth = 10 + titleWidth + 15 + contentWidth + 10;
+				var minWidth = 10 + titleWidth + 15 + contentWidth + 15;
 
 				if (tooltipHeader) {
 					var headerWidth = 10 * tooltipHeader(d).toString().length + 20;
@@ -212,10 +214,18 @@
 					.attr("height", tooltipHeight)
 					.attr("fill", "#FFF")
 					.attr("stroke", "lightgray")
-
+					.attr("filter","url(#omega3-dropshadow)")
 					.attr("opacity", 0.9);
 
 				if (tooltipHeader) {
+					tooltip.append("rect")
+						.attr("class", "omega3-tooltip-header-background")
+						.attr("fill" , "#EFEFEF")
+						.attr("x", 0)
+						.attr("y", 0)
+						.attr("width", tooltipWidth)
+						.attr("height",  (textSpacing) + 10);
+
 					tooltip.append("text")
 						.attr("color", "black")
 						.attr("class", "omega3-tooltip-header")
@@ -230,8 +240,8 @@
 						.attr("stroke-width" , 1)
 						.attr("x1", 0)
 						.attr("x2", tooltipWidth)
-						.attr("y1",  (textSpacing * lines) + 12)
-						.attr("y2",  (textSpacing * lines) + 12);
+						.attr("y1",  (textSpacing * lines) + 10)
+						.attr("y2",  (textSpacing * lines) + 10);
 				}
 
 				tooltipFunctions.forEach(function (t) {
@@ -246,7 +256,7 @@
 					tooltip.append("text")
 						.attr("class", "omega3-tooltip-data-content")
 						.attr("color", "black")
-						.attr("x", 10 + titleWidth + 15)
+						.attr("x", titleWidth + 15)
 						.attr("y", (textSpacing * lines) + 30)
 						.text(t.contentFunction(d));
 
@@ -278,6 +288,9 @@
 		];
 		return colours;
 	};
+
+	omega3.successColour = "rgb(44,160,44)";
+	omega3.failColour = "rgb(214,39,40)";
 
 	omega3.search = function(nodesList, searchString) {
 		for (nodesKey in nodesList) {
@@ -367,6 +380,178 @@
 		throw new Error("Unable to copy obj! Its type isn't supported.");
 	};
 
+	omega3.addShadowDef = function(svg) {
+
+		var filter = svg.append("defs")
+			.append("filter")
+			.attr("id", "omega3-dropshadow")
+			.attr("x", "-40%")
+			.attr("y", "-40%")
+			.attr("width", "200%")
+			.attr("height", "200%");
+		
+		filter.append("feOffset")
+			.attr("dx", 3)
+			.attr("dy", 4)
+			.attr("in", "SourceAlpha")
+			.attr("result", "offOut");
+
+		filter.append("feGaussianBlur")
+			.attr("in", "offOut")
+			.attr("stdDeviation", 4)
+			.attr("result","blurOut");
+
+		filter.append("feBlend")
+			.attr("in", "SourceGraphic")
+			.attr("in2", "blurOut")
+			.attr("mode","normal");
+
+		var f2 = svg.append("defs")
+			.append("filter")
+			.attr("id", "omega3-dropshadow-1")
+			.attr("x", "-40%")
+			.attr("y", "-40%")
+			.attr("width", "200%")
+			.attr("height", "200%");
+		
+		f2.append("feOffset")
+			.attr("dx", 1)
+			.attr("dy", 2)
+			.attr("in", "SourceAlpha")
+			.attr("result", "offOut");
+
+		f2.append("feGaussianBlur")
+			.attr("in", "offOut")
+			.attr("stdDeviation", 2)
+			.attr("result","blurOut");
+
+		f2.append("feBlend")
+			.attr("in", "SourceGraphic")
+			.attr("in2", "blurOut")
+			.attr("mode","normal");
+	
+
+	}
+	omega3.drag = function(force, tick) {
+		
+		var dragstarted = function(v) {
+		  force.stop();
+		  this.parentNode.appendChild(this);
+		  var node = d3.select(this);
+		  var currentRadius = v.radius || element.attr("r");
+		  v.radius = currentRadius * 1.2;
+		  node
+		  	  .attr("filter", "url(#omega3-dropshadow)")
+		  	  .transition()
+		      .ease("elastic")
+		      .duration(500)
+		      .attr("r", function (d) {return d.radius;});
+		}
+
+		var dragged = function (d) {
+		  
+		  d.x = d3.event.x;
+		  d.y = d3.event.y;
+		  var node = d3.select(this)
+		  switch (this.tagName) {
+		  	case "circle":
+		  		node.attr("cx", function (d) { return d.x })
+		  			.attr("cy", function (d) { return d.y })
+		  		break;
+		  	case "rect":
+		  		node.attr("x", function (d) { return d.x })
+		  			.attr("y", function (d) { return d.y })
+		  		break
+		  }
+		  // var tickCaller = function () {
+		  // 		this.alpha = force.alpha();
+		  // 		return this;
+		  // };
+
+		  //tickCaller().call(tick);
+		  for (var i = 0; i < 100; i++) {
+		  	tick({alpha:force.alpha()})
+		  }
+		  
+		}
+
+		var dragended = function(v) {
+		  force.start();
+		  var currentRadius = v.radius || element.attr("r");
+		  v.radius = currentRadius / 1.2;
+		  d3.select(this)
+		  	  .attr("filter", "")
+		  	  .transition()
+		      .ease("elastic")
+		      .duration(500)
+		      .attr("r", function (d) {return d.radius;});
+		}
+
+
+		var drag = d3.behavior.drag()
+				    //.origin(function(d) { return {x: d[0], y: d[1]}; })
+				    .on("dragstart", dragstarted)
+				    .on("drag", dragged)
+				    .on("dragend", dragended);
+
+		return function (g) {
+			g
+			// .on("dragstart", function (d) {
+			// 	var element = d3.select(this);
+			// 	var currentRadius = d.radius || element.attr("r");
+			// 	if (currentRadius) {
+			// 		d.radius = currentRadius * 1.1;
+			// 		element.attr("r", function (d) {return d.radius;});
+			// 	}
+			// })
+			// .on("dragend", function (d) {
+			// 	var element = d3.select(this);
+			// 	var currentRadius = d.radius || element.attr("r");
+			// 	if (currentRadius) {
+			// 		d.radius = currentRadius / 1.1;
+			// 		element.attr("r", function (d) {return d.radius;});
+			// 	}
+			// })
+			.call(drag);
+		}
+	}
+
+	omega3.circleHover = function (g) {
+		g.on("mouseover", function (v,i) {
+			var node = d3.select(this);
+			var currentRadius = v.radius || element.attr("r");
+			v.radius = currentRadius;
+			v._temp_radius = currentRadius * 1.2;
+			node
+			  	  .attr("filter", "url(#omega3-dropshadow)")
+			  	  .transition()
+			      .ease("elastic")
+			      .duration(500)
+			      .attr("r", function (d) {return d._temp_radius;});
+		})
+		.on("mouseleave", function (v,i) {
+			// var currentRadius = v.radius || element.attr("r");
+			// v.radius = currentRadius / 1.2;
+			d3.select(this)
+			  	  .attr("filter", "")
+			  	  .transition()
+			      .ease("elastic")
+			      .duration(500)
+			      .attr("r", function (d) {return d.radius;});
+		})
+	};
+
+	// omega3.circleExit = function (v,i) {
+	// 	var currentRadius = v.radius || element.attr("r");
+	// 	v.radius = currentRadius / 1.2;
+	// 	d3.select(this)
+	// 	  	  .attr("filter", "")
+	// 	  	  .transition()
+	// 	      .ease("elastic")
+	// 	      .duration(500)
+	// 	      .attr("r", function (d) {return d.radius;});
+	// }
+
 	omega3.correlate = function (dataset, xColumn, yColumn) {
 		var xMean = d3.mean(dataset, function(d) {return d[xColumn];});
 		var yMean = d3.mean(dataset, function(d) {return d[yColumn];});
@@ -384,100 +569,291 @@
 		return xy / Math.sqrt(x2*y2);
 	};
 
+	omega3.generate = function(config) {
+		
+		switch (config.type) {
+			case "floating-bubble" : 
+				var primaryLayer = config.layers[0];
+				var chart = omega3.floatingBubble(config.data)
+								.setBinding(config.selector)
+								.yAxisValue(primaryLayer.y.value)
+								.setYLabel(primaryLayer.y.label)
+								.setYFormat(d3.format(primaryLayer.y.format));
+
+				if (primaryLayer.tooltip) {
+					if (primaryLayer.tooltip.title) {
+						chart.setTooltipHeaderValue(primaryLayer.tooltip.title)
+					}
+					primaryLayer.tooltip.values.forEach(function (v) {
+						chart.addTooltipValue(v.title, v.value, v.format);
+					})
+				}
+				if (primaryLayer.colour) {
+					chart.setColourFunction(primaryLayer.colour);
+				}
+				if (primaryLayer.legend) {
+					chart.setLegendFunction(primaryLayer.legend);
+				}
+
+				return chart.init();
+			case "scatter" : 
+				break;
+			case "composite" : 
+				break;
+		}
+		return false;
+	};
+
+	omega3.baseChart = function (jsonData) {
+		var chart = {};
+		chart.data = jsonData;
+		chart.nodes = [];
+		chart.bindingSelector = "body";
+		chart.width = 200;
+		chart.height = 400;
+		chart.success = omega3.successColour;
+		chart.fail = omega3.failColour;
+		chart.customSize = false;
+		chart.padding = 30;
+		chart.colours = omega3.colours();
+		chart.showLegend = true;
+		chart.legendArea = 150;
+		chart.allowSearch = true;
+		chart.tooltipFunctions = [];
+		chart.tooltipHeader = null;
+		chart.legendFunction = null;
+		chart.yFormat = d3.format(",.2f");
+		chart.xFormat = null;
+		chart.xAccessor = null;
+		chart.xColumn = null;
+		chart.yAccessor = null;
+		chart.yColumn = null;
+		chart.radiusAccessor = null;
+		chart.radiusColumn = null;
+		chart.xAxis = null;
+		chart.yAxis = null;
+		chart.xRange = null;
+		chart.yRange = null;
+		chart.setBinding = function (selector) {
+			chart.bindingSelector = selector;
+			return this;
+		};
+
+		chart.xAxisValue = function (xColumn) {
+			chart.xColumn = xColumn;
+			chart.xAccessor = function (d) { return d[xColumn]};
+			return this;
+		};
+
+		chart.yAxisValue = function (yColumn) {
+			chart.yColumn = yColumn;
+			chart.yAccessor = function (d) { return d[yColumn]};
+			return this;
+		};
+
+		chart.radiusValue = function (radiusColumn) {
+			chart.radiusColumn = radiusColumn;
+			chart.radiusAccessor = function (d) { return d[radiusColumn]};
+			return this;
+		}
+
+		chart.setXFormat = function (formatFunction) {
+			chart.xFormat = formatFunction;
+			return this;
+		};
+
+		chart.setYFormat = function (formatFunction) {
+			chart.yFormat = formatFunction;
+			return this;
+		};
+
+		chart.setYLabel = function (titleString) {
+			chart.yTitle = titleString;
+			return this;
+		};
+
+		chart.setXLabel = function (titleString) {
+			chart.xTitle = titleString;
+			return this;
+		};
+
+		chart.setTooltipHeaderValue = function(headerAccessor) {
+			chart.tooltipHeader = function (d) { return d[headerAccessor]; }
+			return this;
+		};
+
+		chart.addTooltipValue = function(title, valueColumn, format) {
+			if (!format) {
+				format = function (d) { return d; };
+			}
+			chart.tooltipFunctions.push({
+					title: title,
+					contentFunction: function (d) {return format(d[valueColumn]);}
+			})	
+			return this;
+		}
+
+		chart.setCustomLegendFunction = function (legendFunction) {
+			chart.legendFunction = legendFunction;
+			return this;
+		};
+
+		return chart;
+	}
+
+	omega3.trendSpark = function(jsonData) {
+		var trendSpark = new omega3.baseChart(jsonData);
+		trendSpark.chartClass = "omega3-trend-spark";
+		trendSpark.width = 300;
+		trendSpark.height = 300;
+		trendSpark.easeMethod = "cubic";
+		trendSpark.interpolated = true;
+		trendSpark.xFormat = d3.time.format("%d/%m/%Y");
+
+		trendSpark.init = function(resize) {
+			if (!(trendSpark.yAccessor && trendSpark.xAccessor)) {
+				throw "Mandatory values not set. All values must be set (yAxisValue, xAxisValue)";
+			}
+
+			d3.select(trendSpark.bindingSelector + ' svg').remove();
+
+			var lastValue = trendSpark.data[trendSpark.data.length-1];
+			var secondLastValue = trendSpark.data[trendSpark.data.length-2];
+			var trend = trendSpark.yAccessor(lastValue) >= trendSpark.yAccessor(secondLastValue);
+
+			trendSpark.xRange = d3.scale
+				.linear()
+				.domain(
+					[
+						Math.min(1,d3.min(trendSpark.data, trendSpark.xAccessor)),
+						Math.max(1,d3.max(trendSpark.data, trendSpark.xAccessor))
+					]
+				)
+				.range([0, trendSpark.width]);
+
+			trendSpark.yRange = d3.scale
+				.linear()
+				.domain(
+					[
+						Math.min(1,d3.min(trendSpark.data, trendSpark.yAccessor)),
+						Math.max(1,d3.max(trendSpark.data, trendSpark.yAccessor))
+					]
+				)
+				.range([trendSpark.height-trendSpark.padding, trendSpark.height/2]);
+
+			
+			var line = d3.svg.line()
+			    .x(function(d) { return trendSpark.xRange(trendSpark.xAccessor(d)); })
+			    .y(function(d) { return trendSpark.yRange(trendSpark.yAccessor(d)); });
+
+			if (trendSpark.interpolated) {
+				line.interpolate('cardinal');
+			}
+
+			var svg = d3.select(trendSpark.bindingSelector)
+				.append('svg')
+				.attr("width", trendSpark.width)
+				.attr("height", trendSpark.height)
+				.classed(omega3.baseClass, true)
+				.classed(trendSpark.chartClass, true)
+				.call(omega3.addShadowDef);
+
+			var path = svg.append("path")
+		      .datum(trendSpark.data)
+		      .attr("class", "omega3-line-chart")
+		      .attr("stroke", trend ? trendSpark.success : trendSpark.fail)
+		      .attr("filter","url(#omega3-dropshadow-1)")
+		      .attr("d", line);
+				
+
+			var totalLength = path.node().getTotalLength();
+
+		    path.attr("stroke-dasharray", totalLength + " " + totalLength)
+				 .attr("stroke-dashoffset", totalLength)
+				 .transition()
+				 .duration(2000)
+				 .ease(trendSpark.easeMethod)
+				 .attr("stroke-dashoffset", 0);
+
+			
+
+			var trendY = trendSpark.height/3 + 10;
+			var trendX = trendSpark.width/5;
+			if (trend) {
+				
+				svg.append('g')
+					.attr("transform", "translate( " + [trendX, trendY] + ")")
+					.append("path")
+					.attr("d", d3.svg.symbol().type("triangle-up")())
+					//.attr("filter","url(#omega3-dropshadow-1)")
+					.attr("fill", trendSpark.success )
+					.attr("transform", "scale(2)")
+			} else {
+				svg.append('g')
+					.attr("transform", "translate( " + [trendX, trendY] + ")")
+					.append("path")
+					.attr("d", d3.svg.symbol().type("triangle-down")())
+					//.attr("filter","url(#omega3-dropshadow-1)")
+					.attr("fill", trendSpark.fail)
+					.attr("transform", "scale(2)")
+			}
+
+			svg.append("text")
+				.attr("dx", trendSpark.width - trendSpark.width/2)
+				.attr("dy", trendSpark.height/3 + 20)
+				.attr("font-size", "30px")
+				.text(trendSpark.yFormat(trendSpark.yAccessor(secondLastValue)))
+
+			svg.append("text")
+				.attr("dx", trendSpark.width/2)
+				.attr("dy", trendSpark.height/4 - 20)
+				.attr("font-size", "30px")
+				.attr("text-anchor", "middle")
+				.text(trendSpark.yTitle || trendSpark.yColumn)
+
+		}
+
+		return trendSpark;
+	};
+
 	omega3.scatter = function(jsonData) {
-		var scatter = {};
+		var scatter = new omega3.baseChart(jsonData);
+		//var scatter = {};
 		scatter.chartClass = "omega3-scatter";
 		scatter.data = jsonData;
 		scatter.nodes = [];
 		scatter.bindingSelector = "body";
 		scatter.width = 200;
 		scatter.height = 400;
-		scatter.customSize = false;
-		scatter.padding = 30;
+
 		scatter.radius = 8;
-		scatter.colours = omega3.colours();
-		scatter.showLegend = true;
+		
 		scatter.colourFunction = null;
 		scatter.axisPaddingPercent = 0.05;
 		scatter.circles = null;
-		scatter.legendArea = 150;
-		scatter.allowSearch = true;
-		scatter.tooltipFunctions = [];
-		scatter.tooltipHeader = null;
 
 		scatter.force = null;
 		scatter.gravity = 0;
 		scatter.charge = -20;
 		scatter.chargeDistance = 40;
 
-		scatter.xAccessor = null;
-		scatter.xColumn = null;
-		scatter.yAccessor = null;
-		scatter.yColumn = null;
-		scatter.radiusAccessor = null;
-		scatter.radiusColumn = null;
-		scatter.xAxis = null;
-		scatter.yAxis = null;
-		scatter.xRange = null;
-		scatter.yRange = null;
+		
 		scatter.radiusRange = null;
-		scatter.legendFunction = null;
+		
 
 		scatter.yFormat = d3.format(",.2f");
 		scatter.xFormat = function (d) {return isNaN(+d) ? d : d3.format(",.2f")(d)};
 
-		scatter.setBinding = function (selector) {
-			scatter.bindingSelector = selector;
-			return this;
-		};
-
-		scatter.xAxisValue = function (xColumn) {
-			scatter.xColumn = xColumn;
-			scatter.xAccessor = function (d) { return d[xColumn]};
-			return this;
-		};
-
-		scatter.yAxisValue = function (yColumn) {
-			scatter.yColumn = yColumn;
-			scatter.yAccessor = function (d) { return d[yColumn]};
-			return this;
-		};
-
+	
 		scatter.radiusValue = function (radiusColumn) {
 			scatter.radiusColumn = radiusColumn;
 			scatter.radiusAccessor = function (d) { return d[radiusColumn]};
 			return this;
 		}
 
-		scatter.setXFormat = function (formatFunction) {
-			scatter.xFormat = formatFunction;
-			return this;
-		};
+		
 
-		scatter.setYFormat = function (formatFunction) {
-			scatter.yFormat = formatFunction;
-			return this;
-		};
-
-		scatter.setYTitle = function (titleString) {
-			scatter.yTitle = titleString;
-			return this;
-		};
-
-		scatter.setXTitle = function (titleString) {
-			scatter.xTitle = titleString;
-			return this;
-		};
-
-		scatter.setTooltipHeaderValue = function(headerAccessor) {
-			scatter.tooltipHeader = function (d) { return d[headerAccessor]; }
-			return this;
-		};
-
-		scatter.setCustomLegendFunction = function (legendFunction) {
-			scatter.legendFunction = legendFunction;
-			return this;
-		};
+		
 
 		scatter.customAxis = function(g) {
 		  g.selectAll("text")
@@ -598,7 +974,9 @@
 						.classed(omega3.baseClass, true)
 						.classed(scatter.chartClass, true)
 						.attr("width", scatter.width )
-						.attr("height", scatter.height );
+						.attr("height", scatter.height )
+						.call(omega3.addShadowDef);
+
 			}
 			
 			if (scatter.showLegend) {
@@ -823,25 +1201,28 @@
 				scatter.legendFunction = scatter.colourFunction;
 			}
 
-			scatter.tooltipFunctions.push({
-				title:(scatter.yTitle || scatter.yColumn),
-				contentFunction: function (d) {return scatter.yFormat(scatter.yAccessor(d));}
-			})	
-
-			scatter.tooltipFunctions.push({
-				title:(scatter.xTitle || scatter.xColumn),
-				contentFunction: function (d) {return scatter.xFormat(scatter.xAccessor(d));}
-			})	
-
-			if (scatter.radiusColumn) {
+			if (scatter.tooltipFunctions.length == 0) {
 				scatter.tooltipFunctions.push({
-					title:(scatter.radiusTitle || scatter.radiusColumn),
-					contentFunction: function (d) {return scatter.radiusAccessor(d);}
+					title:(scatter.yTitle || scatter.yColumn),
+					contentFunction: function (d) {return scatter.yFormat(scatter.yAccessor(d));}
 				})	
-			}			
+
+				scatter.tooltipFunctions.push({
+					title:(scatter.xTitle || scatter.xColumn),
+					contentFunction: function (d) {return scatter.xFormat(scatter.xAccessor(d));}
+				})	
+
+				if (scatter.radiusColumn) {
+					scatter.tooltipFunctions.push({
+						title:(scatter.radiusTitle || scatter.radiusColumn),
+						contentFunction: function (d) {return scatter.radiusAccessor(d);}
+					})	
+				}	
+			}
+					
 
 			var tooltip = omega3.tooltip(scatter.tooltipFunctions, scatter.tooltipHeader);
-			
+			var drag = omega3.drag(scatter.force, scatter.tick);
 
 			var yAvg = d3.mean(scatter.data, scatter.yAccessor);
 
@@ -859,6 +1240,10 @@
 				.attr('r', function(d) {return 0;})
 				.attr("omega3-legend-data", scatter.legendFunction)
 				.attr("omega3-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
+				
+				.call(tooltip)
+				//.call(omega3.circleHover)
+				//.call(scatter.force.drag)
 				.call(scatter.force.drag)
 				.transition()
 				.delay(function(d,i) { return i * 25; })
@@ -867,76 +1252,6 @@
 				.attr("cy", function(d) { return d.y; })
 				.attr('r', function(d) {return scatter.radiusRange(scatter.radiusAccessor(d));})
 				;
-
-			scatter.circles.call(tooltip);
-				// .on("mouseover",function(d,i) { 
-				//   var el = d3.select(this)
-				  
-				//   el.style("stroke","#AFAFAF").style("stroke-width",3);
-				//   var parentWidth;
-				//   if (this.parentNode.width && this.parentNode.width.baseVal && this.parentNode.width.baseVal.value) {
-				// 	parentWidth = this.parentNode.width.baseVal.value;
-				//   }
-				//   var tooltipWidth = 200;
-				//   var tooltipHeight = 90;
-				//   var textSpacing = 18;
-				//   var lines = 0;
-				//   var xCoord = +el.attr('cx') - tooltipWidth/2;
-				//   var yCoord = +el.attr('cy') - d.radius - tooltipHeight - 5;
-				//   if (yCoord < 0) {
-				// 		yCoord = +el.attr('cy') + d.radius + 5
-				//   } 
-
-				//   if (xCoord < 0) {
-				// 	xCoord = 0;
-				//   } else if (parentWidth && xCoord + tooltipWidth > parentWidth) {
-				// 	xCoord = parentWidth - tooltipWidth;
-				//   }
-				//   tooltip = svg
-				// 		.append('g')
-				// 		.attr("class", "omega3-tooltip")
-				// 		.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
-				//   tooltip
-				// 		.append('rect')
-				// 		.attr("x",0)
-				// 		.attr("y",0)
-				// 		.attr("width", tooltipWidth)
-				// 		.attr("height", tooltipHeight)
-				// 		.attr("fill", "#FFF")
-				// 		.attr("stroke", "lightgray")
-				// 		.style("border-radius", "10px")
-				// 		.attr("opacity", 0.9);
-
-				//   if (scatter.tooltipHeader) {
-				// 	tooltip.append("text")
-				// 			.attr("color", "black")
-				// 			.attr("class", "omega3-tooltip-header")
-				// 			.attr("y", (textSpacing * lines++) + 30)
-				// 			.attr("x", 30)
-				// 			.text(scatter.tooltipHeader(d))
-				//   }
-				//   var yTitle = (scatter.yTitle || scatter.yColumn) + ": ";
-				//   var xTitle = (scatter.xTitle || scatter.xColumn) + ": ";
-
-				//   tooltip.append("text")
-				// 		.attr("color", "black")
-				// 		.attr("x", 30)
-				// 		.attr("y", (textSpacing * lines++) + 30)
-				// 		.text(xTitle + scatter.xFormat(scatter.xAccessor(d)));
-
-				//   tooltip.append("text")
-				// 		.attr("color", "black")
-				// 		.attr("x", 30)
-				// 		.attr("y", (textSpacing * lines++) + 30)
-				// 		.text(yTitle + scatter.yFormat(scatter.yAccessor(d)));
-				  
-				//   })
-				// .on("mouseout",function(d,i) { 
-				//   d3.select(this)
-				//   .style("stroke-width",0)
-				//   //.style("stroke", function(d){ return that.getStrokeColor(d); })
-				//   d3.selectAll(".omega3-tooltip").remove()
-				// })
 			
 			if (scatter.xAxis) {
 				svg.select("g.x.axis").remove();

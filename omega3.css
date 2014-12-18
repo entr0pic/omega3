@@ -34,11 +34,16 @@
 	opacity:0.8;
 }
 
+.omega3 .omega3-line-chart {
+	fill: none;
+	stroke-width: 2px;
+}
+
 .omega3-search {
 	position: relative;
 }
 
 .omega3-tooltip-header {
-font-size: 17px;
-font-weight: bold;
+	font-size: 15px;
+	font-weight: 400;
 }
