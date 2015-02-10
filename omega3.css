@@ -23,6 +23,16 @@
 	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+.omega3 .trend-popup {
+	
+	fill: black;
+	fill-opacity: 0.5;
+}
+
+.omega3 .trend-popup-text{
+	color: white;
+	fill: white;
+}
 .omega3 .marker-line {
 	stroke: black;
 	stroke-width: 2;	

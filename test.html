@@ -32,15 +32,15 @@
 				var dataset = [];
 				var options = ["Set 1", "Set 2", "Set 3", "Super Set"];
 				for (var i=0; i < 20; i++) {
-				var r = (Math.random()-0.5) * 50;
+				var r = i;//(Math.random()-0.5) * 50;
 				var r2 = r + (Math.random()-0.5) * 1;
 				dataset.push({xV: r , yV:r2, name:options[Math.floor(Math.random()*options.length)]});
 				}
 
-				var currentScatter = omega3.scatter(dataset)
+				var currentScatter = omega3.trendSpark(dataset)
 										.xAxisValue("xV")
 										.yAxisValue("yV")
-										.setColourFunction(function (d) {return d.name})
+										//.setColourFunction(function (d) {return d.name})
 										.init();
 			}
 			

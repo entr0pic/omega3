@@ -1,6 +1,6 @@
 !function() {
-	var omega3 = {
-		version: "0.1"
+	var omega3 = function () {
+		this.version: "0.1"
 	};
 
 	if (typeof(d3) == "undefined") {
@@ -157,7 +157,7 @@
 
 		return function (g) {
 
-			var svg = d3.select(g.property("nearestViewportElement"));
+		 	var svg = d3.select(g.property("nearestViewportElement"));
 			var colour = g.attr("omega3-legend-color") != undefined ? g.attr("omega3-legend-color") : g.style("fill") != 'none' ? g.style("fill") : g.style("stroke");
 			var shape = g.attr("omega3-legend-shape") || "rect";
 
@@ -201,7 +201,7 @@
 					xCoord = parentWidth - tooltipWidth;
 				}
 
-				tooltip = svg
+				var tooltip = svg
 					.append('g')
 					.attr("class", "omega3-tooltip")
 					.attr("transform", "translate(" + xCoord + ", " + yCoord +")");
@@ -363,7 +363,7 @@
 		if (obj instanceof Array) {
 			copy = [];
 			for (var i = 0, len = obj.length; i < len; i++) {
-				copy[i] = this.clone(obj[i]);
+				copy[i] = omega3.clone(obj[i]);
 			}
 			return copy;
 		}
@@ -372,7 +372,7 @@
 		if (obj instanceof Object) {
 			copy = {};
 			for (var attr in obj) {
-				if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
+				if (obj.hasOwnProperty(attr)) copy[attr] = omega3.clone(obj[attr]);
 			}
 			return copy;
 		}
@@ -521,7 +521,7 @@
 			var node = d3.select(this);
 			var currentRadius = v.radius || element.attr("r");
 			v.radius = currentRadius;
-			v._temp_radius = currentRadius * 1.2;
+			v._temp_radius = currentRadius * 1.5;
 			node
 			  	  .attr("filter", "url(#omega3-dropshadow)")
 			  	  .transition()
@@ -604,6 +604,17 @@
 		return false;
 	};
 
+	omega3.addEvent = function(elem, type, eventHandle) {
+	    if (elem == null || typeof(elem) == 'undefined') return;
+	    if ( elem.addEventListener ) {
+	        elem.addEventListener( type, eventHandle, false );
+	    } else if ( elem.attachEvent ) {
+	        elem.attachEvent( "on" + type, eventHandle );
+	    } else {
+	        elem["on"+type]=eventHandle;
+	    }
+	};
+
 	omega3.baseChart = function (jsonData) {
 		var chart = {};
 		chart.data = jsonData;
@@ -614,6 +625,8 @@
 		chart.success = omega3.successColour;
 		chart.fail = omega3.failColour;
 		chart.customSize = false;
+		chart.customHeight = false;
+		chart.customWidth = false;
 		chart.padding = 30;
 		chart.colours = omega3.colours();
 		chart.showLegend = true;
@@ -634,6 +647,7 @@
 		chart.yAxis = null;
 		chart.xRange = null;
 		chart.yRange = null;
+		chart.tooltip = null;
 		chart.setBinding = function (selector) {
 			chart.bindingSelector = selector;
 			return this;
@@ -641,12 +655,31 @@
 
 		chart.xAxisValue = function (xColumn) {
 			chart.xColumn = xColumn;
+			chart.data.forEach(function (d) {
+				if (new Date(d[xColumn]) != "Invalid Date") {
+					d[xColumn] = new Date(d[xColumn]);
+				} else
+				if (!isNaN(+d[xColumn])) {
+					d[xColumn] = +d[xColumn];
+				} 
+				
+				
+			});
 			chart.xAccessor = function (d) { return d[xColumn]};
 			return this;
 		};
 
 		chart.yAxisValue = function (yColumn) {
 			chart.yColumn = yColumn;
+			chart.data.forEach(function (d) {
+				if (!isNaN(+d[yColumn])) {
+					d[yColumn] = +d[yColumn];
+				} else if (new Date(d[yColumn]) != "Invalid Date") {
+					d[yColumn] = new Date(d[yColumn]);
+				} 
+				
+				
+			});
 			chart.yAccessor = function (d) { return d[yColumn]};
 			return this;
 		};
@@ -698,35 +731,65 @@
 			return this;
 		};
 
+		chart.setHeight = function (height) {
+			chart.customHeight = height;
+			return this;
+		}
+
+		chart.setWidth = function (width) {
+			chart.customWidth = width;
+			return this;
+		}
+
 		return chart;
 	}
 
 	omega3.trendSpark = function(jsonData) {
 		var trendSpark = new omega3.baseChart(jsonData);
 		trendSpark.chartClass = "omega3-trend-spark";
-		trendSpark.width = 300;
-		trendSpark.height = 300;
+		trendSpark.width = 100;
+		trendSpark.height = 100;
 		trendSpark.easeMethod = "cubic";
 		trendSpark.interpolated = true;
 		trendSpark.xFormat = d3.time.format("%d/%m/%Y");
+
+		trendSpark.resize = function() {
+			trendSpark.init(true);
+		};
 
 		trendSpark.init = function(resize) {
 			if (!(trendSpark.yAccessor && trendSpark.xAccessor)) {
 				throw "Mandatory values not set. All values must be set (yAxisValue, xAxisValue)";
 			}
 
+			if (!trendSpark.customSize) {
+				var n = d3.select(trendSpark.bindingSelector).node();
+				var existingWidth = n.clientWidth;
+				trendSpark.width = trendSpark.width < existingWidth || resize ? existingWidth : trendSpark.width;
+
+				var existingHeight = trendSpark.customHeight || n.offsetHeight || n.parentNode.clientHeight;
+				trendSpark.height =  trendSpark.height < existingHeight || resize ? existingHeight : trendSpark.height;
+			}
+
+			trendSpark.data.sort(function (a,b) { return trendSpark.xAccessor(a) - trendSpark.xAccessor(b)});
+
 			d3.select(trendSpark.bindingSelector + ' svg').remove();
 
-			var lastValue = trendSpark.data[trendSpark.data.length-1];
-			var secondLastValue = trendSpark.data[trendSpark.data.length-2];
-			var trend = trendSpark.yAccessor(lastValue) >= trendSpark.yAccessor(secondLastValue);
+			var trend = true;
+
+			for (var i = trendSpark.data.length-2; i >= 0; i--) {
+				if (trendSpark.yAccessor(trendSpark.data[trendSpark.data.length-1]) != trendSpark.yAccessor(trendSpark.data[i])) {
+					trend = trendSpark.yAccessor(trendSpark.data[trendSpark.data.length-1]) > trendSpark.yAccessor(trendSpark.data[i]);
+					break;
+				}
+			}
 
 			trendSpark.xRange = d3.scale
 				.linear()
 				.domain(
 					[
-						Math.min(1,d3.min(trendSpark.data, trendSpark.xAccessor)),
-						Math.max(1,d3.max(trendSpark.data, trendSpark.xAccessor))
+						d3.min(trendSpark.data, trendSpark.xAccessor),
+						d3.max(trendSpark.data, trendSpark.xAccessor)
 					]
 				)
 				.range([0, trendSpark.width]);
@@ -735,19 +798,21 @@
 				.linear()
 				.domain(
 					[
-						Math.min(1,d3.min(trendSpark.data, trendSpark.yAccessor)),
-						Math.max(1,d3.max(trendSpark.data, trendSpark.yAccessor))
+						d3.min(trendSpark.data, trendSpark.yAccessor),
+						d3.max(trendSpark.data, trendSpark.yAccessor)
 					]
 				)
 				.range([trendSpark.height-trendSpark.padding, trendSpark.height/2]);
 
 			
-			var line = d3.svg.line()
+
+			var area = d3.svg.area()
 			    .x(function(d) { return trendSpark.xRange(trendSpark.xAccessor(d)); })
-			    .y(function(d) { return trendSpark.yRange(trendSpark.yAccessor(d)); });
+			    .y1(function(d) { return trendSpark.yRange(trendSpark.yAccessor(d)); })
+			    .y0(trendSpark.height)
 
 			if (trendSpark.interpolated) {
-				line.interpolate('cardinal');
+				area.interpolate('linear');
 			}
 
 			var svg = d3.select(trendSpark.bindingSelector)
@@ -760,23 +825,15 @@
 
 			var path = svg.append("path")
 		      .datum(trendSpark.data)
-		      .attr("class", "omega3-line-chart")
+		      .attr("class", "omega3-area-chart")
+		      .classed("fill-success", trend)
+		      .classed("fill-danger", !trend)
 		      .attr("stroke", trend ? trendSpark.success : trendSpark.fail)
-		      .attr("filter","url(#omega3-dropshadow-1)")
-		      .attr("d", line);
+		      .attr("fill", trend ? trendSpark.success : trendSpark.fail)
+		      .attr("fill-opacity",0.95)
+		      //.attr("filter","url(#omega3-dropshadow-1)")
+		      .attr("d", area);
 				
-
-			var totalLength = path.node().getTotalLength();
-
-		    path.attr("stroke-dasharray", totalLength + " " + totalLength)
-				 .attr("stroke-dashoffset", totalLength)
-				 .transition()
-				 .duration(2000)
-				 .ease(trendSpark.easeMethod)
-				 .attr("stroke-dashoffset", 0);
-
-			
-
 			var trendY = trendSpark.height/3 + 10;
 			var trendX = trendSpark.width/5;
 			if (trend) {
@@ -786,6 +843,7 @@
 					.append("path")
 					.attr("d", d3.svg.symbol().type("triangle-up")())
 					//.attr("filter","url(#omega3-dropshadow-1)")
+					.classed("fill-success", true)
 					.attr("fill", trendSpark.success )
 					.attr("transform", "scale(2)")
 			} else {
@@ -794,6 +852,7 @@
 					.append("path")
 					.attr("d", d3.svg.symbol().type("triangle-down")())
 					//.attr("filter","url(#omega3-dropshadow-1)")
+					.classed("fill-danger", true)
 					.attr("fill", trendSpark.fail)
 					.attr("transform", "scale(2)")
 			}
@@ -802,7 +861,7 @@
 				.attr("dx", trendSpark.width - trendSpark.width/2)
 				.attr("dy", trendSpark.height/3 + 20)
 				.attr("font-size", "30px")
-				.text(trendSpark.yFormat(trendSpark.yAccessor(secondLastValue)))
+				.text(trendSpark.yFormat(trendSpark.yAccessor(trendSpark.data[trendSpark.data.length-1])))
 
 			svg.append("text")
 				.attr("dx", trendSpark.width/2)
@@ -811,6 +870,88 @@
 				.attr("text-anchor", "middle")
 				.text(trendSpark.yTitle || trendSpark.yColumn)
 
+			var focus = svg.append("g")
+    						.style("display", "none"); 
+
+    		focus.append("circle")
+		        .attr("class", "y")
+		        .classed("fill-success", trend)
+		        .classed("fill-danger", !trend)
+		        .style("fill", trend ? trendSpark.success : trendSpark.fail)
+		        .attr("r", 6); 
+
+		    focus.append("rect")
+		    	.attr("class", "trend-popup")
+		    	.attr("width", 100)
+		    	.attr("height", 42)
+		    	.attr("fill", "black")
+		    	.attr("fill-opacity", 0.8)
+		    	.attr("filter","url(#omega3-dropshadow-1)");
+
+		    focus.append("text")
+		    	.attr("class", "trend-popup-text x-text")
+		    	.style("font-weight", "bold")
+		    	.attr("text-anchor", "middle");
+
+		    focus.append("text")
+		    	.attr("class", "trend-popup-text y-text")
+		    	.attr("text-anchor", "middle");
+
+			var totalLength = path.node().getTotalLength();
+			var bisector = d3.bisector(trendSpark.xAccessor).left;
+
+		    var mousemove = function () {
+		        var x0 = trendSpark.xRange.invert(d3.mouse(this)[0]),
+		            i = bisector(trendSpark.data, x0, 1),
+		            d0 = trendSpark.data[i - 1],
+		            d1 = trendSpark.data[i],
+		            d = x0 - trendSpark.xAccessor(d0) > trendSpark.xAccessor(d1) - x0 ? d1 : d0;
+
+		        var xPos = trendSpark.xRange(trendSpark.xAccessor(d));
+		        if (xPos-50 < 0) {
+		        	xPos = 50;
+		        } else if (xPos+50 > trendSpark.width) {
+		        	xPos = trendSpark.width-50;
+		        }
+		        focus.select("circle.y")
+		            .attr("transform",
+		                  "translate(" + trendSpark.xRange(trendSpark.xAccessor(d)) + "," +
+		                                 trendSpark.yRange(trendSpark.yAccessor(d)) + ")");
+
+
+		        focus.select("rect.trend-popup")
+		        	.attr("x", xPos-50)
+		        	.attr("y", trendSpark.yRange(trendSpark.yAccessor(d))-50)
+
+		        focus.select("text.x-text")
+		            .attr("transform",
+		                  "translate(" + xPos + "," +
+		                                 (trendSpark.yRange(trendSpark.yAccessor(d))-35) + ")")
+		            .text(trendSpark.xFormat(trendSpark.xAccessor(d)));
+
+		        focus.select("text.y-text")
+		            .attr("transform",
+		                  "translate(" + xPos + "," +
+		                                 (trendSpark.yRange(trendSpark.yAccessor(d))-15) + ")")
+		            .text(trendSpark.yFormat(trendSpark.yAccessor(d)));
+		    }
+
+		     // append the rectangle to capture mouse
+		    svg.append("rect")
+		        .attr("width", trendSpark.width)
+		        .attr("height", trendSpark.height)
+		        .style("fill", "none")
+		        .style("pointer-events", "all")
+		        .on("mouseover", function() { focus.style("display", null); })
+		        .on("mouseout", function() { focus.style("display", "none"); })
+		        .on("mousemove", mousemove);
+
+
+			omega3.addEvent(window, "resize", trendSpark.resize);
+			if (!resize) {
+				setTimeout(trendSpark.resize, 50);
+			}
+			
 		}
 
 		return trendSpark;
@@ -1220,9 +1361,11 @@
 				}	
 			}
 					
-
-			var tooltip = omega3.tooltip(scatter.tooltipFunctions, scatter.tooltipHeader);
-			var drag = omega3.drag(scatter.force, scatter.tick);
+			if (!scatter.tooltip) {
+				scatter.tooltip = omega3.tooltip(scatter.tooltipFunctions, scatter.tooltipHeader);
+			}
+			
+			//var drag = omega3.drag(scatter.force, scatter.tick);
 
 			var yAvg = d3.mean(scatter.data, scatter.yAccessor);
 
@@ -1240,10 +1383,8 @@
 				.attr('r', function(d) {return 0;})
 				.attr("omega3-legend-data", scatter.legendFunction)
 				.attr("omega3-legend-pos", function (d) { if (scatter.legendPosition) { return scatter.legendPosition(d); } else { return 0; }})
-				
-				.call(tooltip)
+				.call(scatter.tooltip)
 				//.call(omega3.circleHover)
-				//.call(scatter.force.drag)
 				.call(scatter.force.drag)
 				.transition()
 				.delay(function(d,i) { return i * 25; })
@@ -1292,14 +1433,14 @@
 				omega3.legend(svg, scatter.allowSearch, scatter.legendArea);
 			}
 
-			d3.select(window).on("resize", scatter.resize);
-
+			//d3.select(window).on("resize", scatter.resize);
+			omega3.addEvent(window, "resize", scatter.resize);
 			return this;
 		};
 
 		return scatter;
 	};
 
-	this.omega3 = omega3;
-	this.Ω3 = omega3;
+	this.omega3 = new omega3();
+	//if (document.charset == "UTF-8") this.Ω3 = omega3;
 }();
